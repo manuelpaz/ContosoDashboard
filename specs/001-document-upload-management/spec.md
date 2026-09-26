@@ -20,6 +20,19 @@ on existing roles.
   documents, and does "manage" include deleting? → A: Team leads can view, download and preview
   all documents uploaded by their team, personal ones included, but cannot edit, replace, delete
   or share them.
+- Q: When a document is permanently deleted, should its activity history be deleted too, or kept
+  for audit? → A: Keep activity records (with the document's title and type captured at the time
+  of each action) plus a "deleted" record; the document, its file, shares and task attachments
+  are removed.
+- Q: When a user attaches a document to a task, can others who see the task open it even without
+  prior access? → A: Attaching never changes access; only documents associated with the task's
+  project can be attached (for a task without a project, only the user's own documents).
+- Q: Besides deleting, can a project manager edit metadata or replace the file of others'
+  documents in their projects? → A: Edit metadata and delete; replacing the file stays with the
+  uploader.
+- Q: When several files are uploaded to a project at once, one notification per file or one per
+  batch? → A: One summary notification per project member per upload batch, stating how many
+  documents were added and linking to the project's documents.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -79,12 +92,15 @@ page, downloadable, and announced by a notification; confirm a non-member cannot
    with project A, **Then** the document appears in project A's documents list for all its members.
 2. **Given** an employee who is not a member of project B, **When** they try to associate an upload
    with project B, **Then** project B is not offered as an option and a forced attempt is rejected.
-3. **Given** a document added to project A, **When** the upload completes, **Then** every other
-   member of project A (including the project manager) receives an in-app notification.
+3. **Given** one or more documents added to project A in a single upload, **When** the upload
+   completes, **Then** every other member of project A (including the project manager) receives
+   exactly one in-app notification stating how many documents were added and linking to project
+   A's documents.
 4. **Given** a user who is not a member of project A, **When** they view project documents or
    search, **Then** project A's documents never appear to them.
 5. **Given** the project manager of project A, **When** they view project A's documents, **Then**
-   they can delete any document associated with project A.
+   they can edit the metadata of and delete any document associated with project A, but cannot
+   replace the file of a document uploaded by someone else.
 6. **Given** a team lead and a personal document uploaded by an employee in the same department,
    **When** the team lead opens it, **Then** they can view, download and preview it but edit,
    replace, delete and share actions are not available and forced attempts are rejected.
@@ -144,7 +160,8 @@ gone for all users.
 5. **Given** the uploader, **When** they replace the file with a new one that passes validation,
    **Then** later downloads return the new file and the previous file is no longer available.
 6. **Given** the uploader, **When** they choose delete and confirm, **Then** the document and its
-   file are permanently removed and disappear from every list, search, share and widget.
+   file are permanently removed and disappear from every list, search, share and widget, while
+   its activity history (including the deletion) remains available to administrators.
 7. **Given** the uploader, **When** they choose delete and then cancel, **Then** nothing changes.
 
 ---
@@ -194,9 +211,11 @@ the dashboard and confirm the widget and count reflect the new upload.
    the task, **Then** the document is attached to the task and associated with project A.
 2. **Given** a task with attached documents, **When** a user with access to the task views it,
    **Then** they see the list of attached documents they are allowed to access.
-3. **Given** a user who uploaded 7 documents, **When** they open the dashboard, **Then** the
-   "Recent Documents" widget lists their 5 most recent uploads, newest first.
+3. **Given** a task in project A, **When** a user tries to attach a personal document or a document
+   from project B, **Then** it is not offered and a forced attempt is rejected.
 4. **Given** a user who uploaded 7 documents, **When** they open the dashboard, **Then** the
+   "Recent Documents" widget lists their 5 most recent uploads, newest first.
+5. **Given** a user who uploaded 7 documents, **When** they open the dashboard, **Then** the
    summary cards show a document count of 7.
 
 ---
@@ -242,7 +261,7 @@ non-administrators cannot open the reports.
 - A user removed from a project immediately loses access to that project's documents that they
   did not upload themselves; documents they uploaded remain visible to them.
 - A task without a project: documents uploaded from it are attached to the task but not
-  associated with any project.
+  associated with any project; only the uploader's own documents can be attached to it.
 - Sharing a document with its own uploader, or with someone who already has access, has no
   effect and produces no duplicate notification.
 - A document selected for download or preview is deleted by its owner at the same moment: the
@@ -286,8 +305,8 @@ non-administrators cannot open the reports.
   metadata, replace its file, share it and delete it.
 - **FR-012**: All members of a project (including its project manager) MUST be able to view,
   download and preview every document associated with that project.
-- **FR-013**: The project manager of a project MUST be able to delete any document associated with
-  that project.
+- **FR-013**: The project manager of a project MUST be able to edit the metadata of and delete any
+  document associated with that project; only the uploader may replace a document's file.
 - **FR-014**: Team leads MUST be able to view, download and preview every document uploaded by a
   member of their team, including personal documents that are not associated with a project or
   shared. Team leads MUST NOT be able to edit, replace, delete or share documents they did not
@@ -315,26 +334,32 @@ non-administrators cannot open the reports.
 
 - **FR-022**: Users MUST be able to preview PDF and image documents in the browser; other types
   are offered for download only.
-- **FR-023**: Users permitted by FR-011/FR-015 MUST be able to edit title, description, category
-  and tags.
+- **FR-023**: Users permitted by FR-011, FR-013 or FR-015 MUST be able to edit title, description,
+  category and tags.
 - **FR-024**: The uploader MUST be able to replace a document's file with a new file that passes
   the same validation as an upload; the previous file is discarded (no version history).
 - **FR-025**: Deleting a document MUST require explicit confirmation and then permanently remove
-  the document, its file, its shares and its task attachments.
+  the document, its file, its shares and its task attachments. The document's activity records
+  (FR-032) MUST be kept and a "deleted" activity record added; deleted documents MUST NOT be
+  downloadable or viewable by anyone, including administrators.
 
 **Sharing and notifications**
 
 - **FR-026**: Document owners MUST be able to share a document with one or more specific users
   and/or with a team.
 - **FR-027**: Users MUST have a "Shared with Me" section listing documents shared with them.
-- **FR-028**: The system MUST send an in-app notification when a document is shared with a user
-  and when a new document is added to a project the user is a member of (the uploader is not
-  notified of their own upload).
+- **FR-028**: The system MUST send an in-app notification when a document is shared with a user,
+  and when new documents are added to a project the user is a member of. Uploads to a project MUST
+  produce one notification per member per upload batch (stating the number of documents added and
+  linking to the project's documents), not one per file; the uploader is not notified of their
+  own upload.
 
 **Integration with existing features**
 
 - **FR-029**: A task view MUST list the documents attached to the task that the user can access,
-  and MUST allow attaching an existing accessible document or uploading a new one.
+  and MUST allow uploading a new document or attaching an existing one. Only documents associated
+  with the task's project can be attached; if the task has no project, only documents the user
+  uploaded can be attached. Attaching a document MUST NOT change who can access it.
 - **FR-030**: A document uploaded from a task MUST be attached to that task and automatically
   associated with the task's project (if the task has one).
 - **FR-031**: The dashboard home page MUST show a "Recent Documents" widget with the user's last 5
@@ -343,7 +368,8 @@ non-administrators cannot open the reports.
 **Activity tracking and reports**
 
 - **FR-032**: The system MUST record every upload, download, deletion and share with the action,
-  user, document and timestamp.
+  user, document, timestamp, and the document's title and file type as they were at that moment,
+  so records remain meaningful after the document is deleted.
 - **FR-033**: Administrators MUST be able to view reports of most uploaded document types, most
   active uploaders and document access patterns (access counts per document over time); these
   reports MUST NOT be available to other roles.
@@ -360,7 +386,8 @@ non-administrators cannot open the reports.
 - **Task Document Attachment**: Links a document to a task; a task can have many documents and a
   document can be attached to several tasks.
 - **Document Activity**: A record of an action (upload, download, delete, share) on a document by a
-  user at a point in time; used for audit and administrator reports.
+  user at a point in time, including a snapshot of the document's title and file type; used for
+  audit and administrator reports. It outlives the document it refers to.
 - **Existing entities involved**: User (uploader, recipients; role and department determine
   permissions), Project and Project Member (project association and access), Task (attachments),
   Notification (share and new-document alerts).
