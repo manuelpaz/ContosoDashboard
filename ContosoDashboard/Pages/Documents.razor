@@ -1,0 +1,108 @@
+@page "/documents"
+@using ContosoDashboard.Services
+@using ContosoDashboard.Models
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
+@inject IDocumentService DocumentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>My Documents - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>My Documents</h1>
+            <p class="text-muted">Documents you have uploaded.</p>
+        </div>
+        <div class="col-auto">
+            <DocumentUpload OnUploaded="LoadAsync" />
+        </div>
+    </div>
+
+    @if (documents == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!documents.Any())
+    {
+        <div class="alert alert-info">You have not uploaded any documents yet.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Uploaded</th>
+                        <th>Size</th>
+                        <th>Project</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var document in documents)
+                    {
+                        <tr>
+                            <td>
+                                <a href="/documents/@document.DocumentId"><strong>@document.Title</strong></a>
+                                <br />
+                                <small class="text-muted">@document.OriginalFileName</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-@DocumentFormatting.GetCategoryColor(document.Category)">@document.Category</span>
+                            </td>
+                            <td>@document.UploadedDate.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</td>
+                            <td>@DocumentFormatting.FormatFileSize(document.FileSize)</td>
+                            <td>
+                                @if (document.Project != null)
+                                {
+                                    <a href="/projects/@document.ProjectId">@document.Project.Name</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                <a class="btn btn-sm btn-outline-primary" href="/documents/@document.DocumentId/download"
+                                   title="Download" aria-label="Download @document.Title">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Document>? documents;
+    private int currentUserId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user ID from authentication claims
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+        {
+            currentUserId = userId;
+        }
+
+        if (currentUserId > 0)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        documents = await DocumentService.GetMyDocumentsAsync(currentUserId, new DocumentQuery());
+    }
+}

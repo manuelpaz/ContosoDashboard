@@ -1,0 +1,128 @@
+@page "/documents/{DocumentId:int}"
+@using ContosoDashboard.Services
+@using ContosoDashboard.Models
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
+@inject IDocumentService DocumentService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Document - ContosoDashboard</PageTitle>
+
+<div class="container-fluid">
+    @if (isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (details == null)
+    {
+        @* Not found and not authorized look the same: never reveal title or owner *@
+        <div class="alert alert-warning">
+            Document not available.
+            <a href="/documents" class="alert-link">Back to My Documents</a>
+        </div>
+    }
+    else
+    {
+        var document = details.Document;
+
+        <div class="row mb-4">
+            <div class="col">
+                <a href="/documents" class="text-decoration-none"><i class="bi bi-arrow-left"></i> My Documents</a>
+                <h1 class="mt-2">@document.Title</h1>
+                <span class="badge bg-@DocumentFormatting.GetCategoryColor(document.Category)">@document.Category</span>
+                @foreach (var tag in document.Tags.OrderBy(t => t.Tag))
+                {
+                    <span class="badge bg-light text-dark border ms-1">#@tag.Tag</span>
+                }
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-primary" href="/documents/@document.DocumentId/download">
+                    <i class="bi bi-download"></i> Download
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header">Details</div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(document.Description))
+                        {
+                            <p>@document.Description</p>
+                        }
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">File name</dt>
+                            <dd class="col-sm-8">@document.OriginalFileName</dd>
+
+                            <dt class="col-sm-4">File type</dt>
+                            <dd class="col-sm-8">@document.FileType</dd>
+
+                            <dt class="col-sm-4">Size</dt>
+                            <dd class="col-sm-8">@DocumentFormatting.FormatFileSize(document.FileSize)</dd>
+
+                            <dt class="col-sm-4">Uploaded by</dt>
+                            <dd class="col-sm-8">@document.UploadedByUser.DisplayName</dd>
+
+                            <dt class="col-sm-4">Project</dt>
+                            <dd class="col-sm-8">
+                                @if (document.Project != null)
+                                {
+                                    <a href="/projects/@document.ProjectId">@document.Project.Name</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">None (personal)</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Uploaded</dt>
+                            <dd class="col-sm-8">@document.UploadedDate.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-4">Last updated</dt>
+                            <dd class="col-sm-8">@document.UpdatedDate.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                @* Preview/Edit/Replace/Delete: US4 *@
+
+                @* Share: US5 *@
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int DocumentId { get; set; }
+
+    // Fully qualified: this page class is also named DocumentDetails
+    private ContosoDashboard.Services.DocumentDetails? details;
+    private bool isLoading = true;
+    private int currentUserId = 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Get current user ID from authentication claims
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+        {
+            currentUserId = userId;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        details = currentUserId > 0 ? await DocumentService.GetDocumentAsync(DocumentId, currentUserId) : null;
+        isLoading = false;
+    }
+}

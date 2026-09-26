@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ContosoDashboard.Data;
 using ContosoDashboard.Services;
+using ContosoDashboard.Endpoints;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -43,6 +44,11 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Document management (local storage and signature-based malware checks for training)
+builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddSingleton<IMalwareScannerService, FileSignatureMalwareScanner>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 // Add HttpContextAccessor for accessing user claims
 builder.Services.AddHttpContextAccessor();
@@ -104,6 +110,9 @@ app.UseRouting();
 // Enable authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Authorized file download endpoints for uploaded documents
+app.MapDocumentEndpoints();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");

@@ -29,6 +29,10 @@ public class Notification
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
+    // Optional app-relative link, e.g. /projects/1#documents or /documents/42
+    [MaxLength(500)]
+    public string? LinkUrl { get; set; }
+
     // Navigation properties
     [ForeignKey("UserId")]
     public virtual User User { get; set; } = null!;
@@ -42,7 +46,9 @@ public enum NotificationType
     TaskCompleted,
     TaskComment,
     ProjectUpdate,
-    SystemAnnouncement
+    SystemAnnouncement,
+    DocumentShared,
+    DocumentAdded
 }
 
 public enum NotificationPriority

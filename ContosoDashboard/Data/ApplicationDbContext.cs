@@ -17,6 +17,11 @@ public class ApplicationDbContext : DbContext
     public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<ProjectMember> ProjectMembers { get; set; } = null!;
     public DbSet<Announcement> Announcements { get; set; } = null!;
+    public DbSet<Document> Documents { get; set; } = null!;
+    public DbSet<DocumentTag> DocumentTags { get; set; } = null!;
+    public DbSet<DocumentShare> DocumentShares { get; set; } = null!;
+    public DbSet<TaskDocument> TaskDocuments { get; set; } = null!;
+    public DbSet<DocumentActivity> DocumentActivities { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,8 +69,98 @@ public class ApplicationDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
 
+        ConfigureDocuments(modelBuilder);
+
         // Seed initial data
         SeedData(modelBuilder);
+    }
+
+    private static void ConfigureDocuments(ModelBuilder modelBuilder)
+    {
+        // Document relationships
+        modelBuilder.Entity<Document>()
+            .HasOne(d => d.UploadedByUser)
+            .WithMany()
+            .HasForeignKey(d => d.UploadedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // If a project is removed, its documents stay with their uploaders, unassociated
+        modelBuilder.Entity<Document>()
+            .HasOne(d => d.Project)
+            .WithMany()
+            .HasForeignKey(d => d.ProjectId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<DocumentTag>()
+            .HasOne(t => t.Document)
+            .WithMany(d => d.Tags)
+            .HasForeignKey(t => t.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DocumentShare>()
+            .HasOne(s => s.Document)
+            .WithMany(d => d.Shares)
+            .HasForeignKey(s => s.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DocumentShare>()
+            .HasOne(s => s.SharedWithUser)
+            .WithMany()
+            .HasForeignKey(s => s.SharedWithUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DocumentShare>()
+            .HasOne(s => s.SharedByUser)
+            .WithMany()
+            .HasForeignKey(s => s.SharedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TaskDocument>()
+            .HasKey(td => new { td.TaskId, td.DocumentId });
+
+        modelBuilder.Entity<TaskDocument>()
+            .HasOne(td => td.Task)
+            .WithMany()
+            .HasForeignKey(td => td.TaskId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TaskDocument>()
+            .HasOne(td => td.Document)
+            .WithMany(d => d.TaskAttachments)
+            .HasForeignKey(td => td.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TaskDocument>()
+            .HasOne(td => td.AttachedByUser)
+            .WithMany()
+            .HasForeignKey(td => td.AttachedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Activity records have no FK to Document so they outlive deleted documents
+        modelBuilder.Entity<DocumentActivity>()
+            .HasOne(a => a.User)
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Indexes for performance
+        modelBuilder.Entity<Document>().HasIndex(d => d.UploadedByUserId);
+        modelBuilder.Entity<Document>().HasIndex(d => d.ProjectId);
+        modelBuilder.Entity<Document>().HasIndex(d => d.Category);
+        modelBuilder.Entity<Document>().HasIndex(d => d.UploadedDate);
+        modelBuilder.Entity<Document>().HasIndex(d => d.FilePath).IsUnique();
+
+        modelBuilder.Entity<DocumentTag>().HasIndex(t => new { t.DocumentId, t.Tag }).IsUnique();
+        modelBuilder.Entity<DocumentTag>().HasIndex(t => t.Tag);
+
+        modelBuilder.Entity<DocumentShare>().HasIndex(s => new { s.DocumentId, s.SharedWithUserId });
+        modelBuilder.Entity<DocumentShare>().HasIndex(s => new { s.DocumentId, s.SharedWithDepartment });
+        modelBuilder.Entity<DocumentShare>().HasIndex(s => s.SharedWithUserId);
+        modelBuilder.Entity<DocumentShare>().HasIndex(s => s.SharedWithDepartment);
+
+        modelBuilder.Entity<DocumentActivity>().HasIndex(a => new { a.Action, a.Timestamp });
+        modelBuilder.Entity<DocumentActivity>().HasIndex(a => a.DocumentId);
+        modelBuilder.Entity<DocumentActivity>().HasIndex(a => a.UserId);
     }
 
     private void SeedData(ModelBuilder modelBuilder)
