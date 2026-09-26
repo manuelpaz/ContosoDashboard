@@ -392,6 +392,10 @@ This is a **training application**, not production code. Known limitations inclu
 
 These limitations are **intentional** for training purposes to keep the application simple and self-contained. Production applications must address all of these security concerns.
 
+### Malware Scanning (Training Implementation)
+
+This training version implements file signature validation and MIME type checking. This provides basic protection against common malware vectors but is not a replacement for enterprise antivirus scanning. Production deployments should integrate with Azure Defender, ClamAV, or similar antivirus services via the `IMalwareScannerService` interface.
+
 ## Code Quality Features
 
 The application demonstrates good coding practices:
