@@ -53,7 +53,7 @@ This application includes a **mock authentication system** designed for training
 
 ## Overview
 
-ContosoDashboard is built using ASP.NET Core 8.0 with Blazor Server and provides a centralized platform for:
+ContosoDashboard is built using ASP.NET Core 10.0 with Blazor Server and provides a centralized platform for:
 
 - Task management and tracking
 - Project oversight and collaboration
@@ -81,9 +81,9 @@ ContosoDashboard is built using ASP.NET Core 8.0 with Blazor Server and provides
 
 ### 🔧 Technical Stack
 
-- **Framework**: ASP.NET Core 8.0
+- **Framework**: ASP.NET Core 10.0
 - **UI**: Blazor Server
-- **Database**: SQL Server LocalDB with Entity Framework Core
+- **Database**: SQLite with Entity Framework Core (cross-platform, file-based)
 - **Authentication**: Cookie-based mock authentication for training (Azure AD/Microsoft Entra ID ready)
 - **Authorization**: Claims-based identity with role-based access control
 - **Styling**: Bootstrap 5.3 with Bootstrap Icons
@@ -97,12 +97,12 @@ ContosoDashboard is built using ASP.NET Core 8.0 with Blazor Server and provides
 This training application follows an **offline-first architecture** with abstraction layers that enable seamless migration to Azure services:
 
 **Current Implementation (Training/Offline):**
-- **Database**: SQL Server LocalDB (offline development database)
+- **Database**: SQLite (single local file, runs on Windows, Linux and macOS)
 - **File Storage**: Local filesystem for any file-based features
 - **Authentication**: Cookie-based mock authentication
 
 **Production Migration Path:**
-- **Database**: Azure SQL Database (replace connection string, no code changes)
+- **Database**: Azure SQL Database (swap the EF Core provider package and `UseSqlite` for `UseSqlServer`, update the connection string; no business logic changes)
 - **File Storage**: Azure Blob Storage (swap `IFileStorageService` implementation)
 - **Authentication**: Microsoft Entra ID (replace authentication middleware)
 
@@ -137,8 +137,8 @@ public interface IFileStorageService
 
 ### Prerequisites
 
-- .NET 8.0 SDK or later
-- SQL Server LocalDB
+- .NET 10.0 SDK or later
+- No database server required (SQLite is bundled with the EF Core provider)
 - Visual Studio 2022 or Visual Studio Code
 
 ### Quick Start
@@ -236,15 +236,15 @@ ContosoDashboard/
 
 ### Database Connection
 
-The default connection string in `appsettings.json` uses SQL Server LocalDB:
+The default connection string in `appsettings.json` uses a SQLite database file:
 
 ```json
 "ConnectionStrings": {
-  "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=ContosoDashboard;Trusted_Connection=True;MultipleActiveResultSets=true"
+  "DefaultConnection": "Data Source=ContosoDashboard.db"
 }
 ```
 
-Update this if using a different SQL Server instance.
+The path is relative to the working directory, so running `dotnet run` from the `ContosoDashboard/` project folder creates `ContosoDashboard/ContosoDashboard.db`. Database files (`*.db`, `*.db-shm`, `*.db-wal`) are excluded from source control.
 
 ### Production Authentication Guidance
 
@@ -351,11 +351,11 @@ The application includes pre-seeded data for testing:
 
 ### Database Issues
 
-**Option 1: Recreate via LocalDB**
+**Option 1: Delete the SQLite database file**
 
-```powershell
-sqllocaldb stop mssqllocaldb
-sqllocaldb delete mssqllocaldb
+```bash
+# Stop the application first, then from the ContosoDashboard/ project folder:
+rm -f ContosoDashboard.db ContosoDashboard.db-shm ContosoDashboard.db-wal
 # Then run the application - database will be recreated automatically
 ```
 
